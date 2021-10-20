@@ -122,35 +122,35 @@ ATTACH_POLICY = """{
             "Action": [
                 "s3:*"
             ],
-            "Resource": "arn:{0}:s3:::*"
+            "Resource": "arn:aws:s3:::*"
         },
         {
             "Effect": "Allow",
             "Action": [
                 "kinesis:*"
             ],
-            "Resource": "arn:{0}:kinesis:*:*:*"
+            "Resource": "arn:aws:kinesis:*:*:*"
         },
         {
             "Effect": "Allow",
             "Action": [
                 "sns:*"
             ],
-            "Resource": "arn:{0}:sns:*:*:*"
+            "Resource": "arn:aws:sns:*:*:*"
         },
         {
             "Effect": "Allow",
             "Action": [
                 "sqs:*"
             ],
-            "Resource": "arn:{0}:sqs:*:*:*"
+            "Resource": "arn:aws:sqs:*:*:*"
         },
         {
             "Effect": "Allow",
             "Action": [
                 "dynamodb:*"
             ],
-            "Resource": "arn:{0}:dynamodb:*:*:*"
+            "Resource": "arn:aws:dynamodb:*:*:*"
         },
         {
             "Effect": "Allow",
@@ -2898,6 +2898,10 @@ class Zappa:
         """
 
         #this creates the dynamic policy for the IAM roles
+        if AWS_PARTITION[self.aws_region] != 'AWS':
+            partion = AWS_PARTITION[self.aws_region]
+            self.attach_policy = self.attach_policy.replace('arn:aws:', f'arn:{partion}:')
+
         self.attach_policy = self.attach_policy.format(AWS_PARTITION[self.aws_region])
 
         attach_policy_obj = json.loads(self.attach_policy)
