@@ -82,7 +82,7 @@ ATTACH_POLICY = """{
             "Action": [
                 "logs:*"
             ],
-            "Resource": "arn:{0}:logs:*:*:*"
+            "Resource": "arn:aws:logs:*:*:*"
         },
         {
             "Effect": "Allow",
@@ -2902,7 +2902,6 @@ class Zappa:
             partion = AWS_PARTITION[self.aws_region]
             self.attach_policy = self.attach_policy.replace('arn:aws:', f'arn:{partion}:')
 
-        self.attach_policy = self.attach_policy.format(AWS_PARTITION[self.aws_region])
 
         attach_policy_obj = json.loads(self.attach_policy)
         assume_policy_obj = json.loads(self.assume_policy)
