@@ -2,6 +2,8 @@
 Zappa core library. You may also want to look at `cli.py` and `util.py`.
 """
 
+import boto3
+import botocore
 ##
 # Imports
 ##
@@ -13,24 +15,21 @@ import logging
 import os
 import random
 import re
+import requests
 import shutil
 import string
 import subprocess
 import tarfile
 import tempfile
 import time
+import troposphere
+import troposphere.apigateway
 import uuid
 import zipfile
+from botocore.exceptions import ClientError
 from builtins import bytes, int
 from distutils.dir_util import copy_tree
 from io import open
-
-import boto3
-import botocore
-import requests
-import troposphere
-import troposphere.apigateway
-from botocore.exceptions import ClientError
 from setuptools import find_packages
 from tqdm import tqdm
 
@@ -83,7 +82,7 @@ ATTACH_POLICY = """{
             "Action": [
                 "logs:*"
             ],
-            "Resource": "arn:aws:logs:*:*:*"
+            "Resource": "arn:{0}:logs:*:*:*"
         },
         {
             "Effect": "Allow",
@@ -123,35 +122,35 @@ ATTACH_POLICY = """{
             "Action": [
                 "s3:*"
             ],
-            "Resource": "arn:aws:s3:::*"
+            "Resource": "arn:{0}:s3:::*"
         },
         {
             "Effect": "Allow",
             "Action": [
                 "kinesis:*"
             ],
-            "Resource": "arn:aws:kinesis:*:*:*"
+            "Resource": "arn:{0}:kinesis:*:*:*"
         },
         {
             "Effect": "Allow",
             "Action": [
                 "sns:*"
             ],
-            "Resource": "arn:aws:sns:*:*:*"
+            "Resource": "arn:{0}:sns:*:*:*"
         },
         {
             "Effect": "Allow",
             "Action": [
                 "sqs:*"
             ],
-            "Resource": "arn:aws:sqs:*:*:*"
+            "Resource": "arn:{0}:sqs:*:*:*"
         },
         {
             "Effect": "Allow",
             "Action": [
                 "dynamodb:*"
             ],
-            "Resource": "arn:aws:dynamodb:*:*:*"
+            "Resource": "arn:{0}:dynamodb:*:*:*"
         },
         {
             "Effect": "Allow",
@@ -235,6 +234,32 @@ ZIP_EXCLUDES = [
     "__pycache__/*",
 ]
 
+AWS_PARTITION = {
+    "us-east-1": "aws",
+    "us-east-2": "aws",
+    "us-west-1": "aws",
+    "us-west-2": "aws",
+    "eu-central-1": "aws",
+    "eu-north-1": "aws",
+    "eu-west-1": "aws",
+    "eu-west-2": "aws",
+    "eu-west-3": "aws",
+    "eu-north-1": "aws",
+    "ap-northeast-1": "aws",
+    "ap-northeast-2": "aws",
+    "ap-northeast-3": "aws",
+    "ap-southeast-1": "aws",
+    "ap-southeast-2": "aws",
+    "ap-east-1": "aws",
+    "ap-south-1": "aws",
+    "ca-central-1": "aws",
+    "cn-north-1": "aws-cn",
+    "cn-northwest-1": "aws-cn",
+    "sa-east-1": "aws",
+    "us-gov-east-1": "aws-us-gov",
+    "us-gov-west-1": "aws-us-gov",
+}
+
 # When using ALB as an event source for Lambdas, we need to create an alias
 # to ensure that, on zappa update, the ALB doesn't lose permissions to access
 # the Lambda.
@@ -297,6 +322,7 @@ class Zappa:
         else:
             self.aws_region = aws_region
 
+        self.aws_partion = AWS_PARTITION[self.aws_region]
         if desired_role_name:
             self.role_name = desired_role_name
 
@@ -2870,6 +2896,10 @@ class Zappa:
         Create and defines the IAM roles and policies necessary for Zappa.
         If the IAM role already exists, it will be updated if necessary.
         """
+
+        #this creates the dynamic policy for the IAM roles
+        self.attach_policy = self.attach_policy.format(AWS_PARTITION[self.aws_region])
+
         attach_policy_obj = json.loads(self.attach_policy)
         assume_policy_obj = json.loads(self.assume_policy)
 
